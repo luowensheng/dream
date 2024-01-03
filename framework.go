@@ -112,9 +112,9 @@ func (manager *Manager) addBroadcastListener(name string, handler EventHandler) 
 	manager.broacasts[name] = append(manager.broacasts[name], handler)
 }
 
-type Optional[T interface{}] struct {
-	data T
-}
+// type Optional[T interface{}] struct {
+// 	data T
+// }
 
 type Record = map[string]string
 
@@ -220,10 +220,10 @@ type DOMVariable[T Comparable] struct {
 	tasks []func(T)
 }
 
-func newDOMVariable[T Comparable](value T) *DOMVariable[T] {
-	name := generateUniqueName("domvariable")
-	return newNamedDOMVariable(name, value)
-}
+// func newDOMVariable[T Comparable](value T) *DOMVariable[T] {
+// 	name := generateUniqueName("domvariable")
+// 	return newNamedDOMVariable(name, value)
+// }
 
 func ToJsonString[T any](value T) string {
 	bytes, err := json.Marshal(value)
@@ -276,7 +276,7 @@ func (variable *DOMVariable[T]) SetValue(newValue T) {
 	if fmt.Sprint(variable.value) == fmt.Sprint(newValue) {
 		return
 	}
-	fmt.Println("\n\n\n changing '",variable.name ,"'from ", ToJsonString(variable.value)," to ", ToJsonString(newValue)," \n\n")
+	fmt.Println("\n\n\n changing '",variable.name ,"'from ", ToJsonString(variable.value)," to ", ToJsonString(newValue)," \n\n ")
 	variable.value = newValue
 	Each(variable.tasks, func(task func(T)) {
 		task(variable.value)
