@@ -2,7 +2,7 @@ package demo
 
 import (
 	"fmt"
-	"dream"
+	"github.com/luowensheng/dream"
 )
 
 func Square(value string, onSquareClick func(dream.Record) string) {

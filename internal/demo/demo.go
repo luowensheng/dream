@@ -3,7 +3,7 @@ package demo
 import (
 	"fmt"
 	"strconv"
-	"dream"
+	"github.com/luowensheng/dream"
 )
 
 var ALIEN_IMAGES = []string{
