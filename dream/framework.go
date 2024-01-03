@@ -1,4 +1,4 @@
-package main
+package dream
 
 import (
 	"encoding/json"
@@ -233,15 +233,15 @@ func ToJsonString[T any](value T) string {
 	}
     return string(bytes)
 }
-func setDOMVariableCommand[T Comparable](name string, value T) string {
+func SetDOMVariableCommand[T Comparable](name string, value T) string {
 
     cmd := fmt.Sprintf("setDOMVariable('%s', %s)", name, ToJsonString(value))
 	fmt.Println(">>>>", cmd, "<<<<<")
 	return cmd
 }
-func newNamedDOMVariable[T Comparable](name string, value T) *DOMVariable[T] {
+func NewNamedDOMVariable[T Comparable](name string, value T) *DOMVariable[T] {
 
-    cmd := setDOMVariableCommand(name, value)
+    cmd := SetDOMVariableCommand(name, value)
 	fmt.Println(cmd, name)
 	ExecuteJS(cmd)
 
@@ -249,7 +249,7 @@ func newNamedDOMVariable[T Comparable](name string, value T) *DOMVariable[T] {
 	item.OnValueUpdated(func(t T) {
 		json.Marshal(t)
 
-		ExecuteJS(setDOMVariableCommand(name, t))
+		ExecuteJS(SetDOMVariableCommand(name, t))
 		fmt.Println("*^^*^*^*^*^*^*^*^*^*^*^*^*")
 
 		// fmt.Println("\n\nUPDATED %%BBBBBerwerw\n", name, t, "\n\n")
@@ -478,19 +478,19 @@ func (elementRef *ElementRef) ExecuteJS(command string) {
 	})
 }
 
-func (elementRef *ElementRef) getTextContent() string {
-	return elementRef.createQueryFromCommand(fmt.Sprintf("{this}.textContent;"))
+func (elementRef *ElementRef) GetTextContent() string {
+	return elementRef.createQueryFromCommand("{this}.textContent;")
 }
 
-func (elementRef *ElementRef) getValue() string {
-	return elementRef.createQueryFromCommand(fmt.Sprintf("{this}.value;"))
+func (elementRef *ElementRef) GetValue() string {
+	return elementRef.createQueryFromCommand("{this}.value;")
 }
 
-func (elementRef *ElementRef) getAttribute(key string) string {
+func (elementRef *ElementRef) GetAttribute(key string) string {
 	return elementRef.createQueryFromCommand(fmt.Sprintf("{this}.getAttribute('%s');", key))
 }
 
-func (elementRef *ElementRef) getStyle(key string) string {
+func (elementRef *ElementRef) GetStyle(key string) string {
 	return elementRef.createQueryFromCommand(fmt.Sprintf("{this}.style['%s'];", key))
 }
 
@@ -623,7 +623,7 @@ func CreateHTML(title string, app func()) string {
 	return html
 }
 
-func CreateApp(title string, app func()) {
+func CreateApp(title string, port uint, app func()) {
 
 	MANAGER.reset()
 
@@ -657,5 +657,5 @@ func CreateApp(title string, app func()) {
 		json.NewEncoder(w).Encode(clientCommands)
 	})
 
-	server.Listen(8080)
+	server.Listen(port)
 }

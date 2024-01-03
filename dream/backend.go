@@ -1,4 +1,5 @@
-package main
+package dream
+
 import (
 	"fmt"
 	"log"
@@ -27,7 +28,7 @@ func (app *App) Expose(path string, dir string){
     http.Handle(path, http.StripPrefix(path, http.FileServer(http.Dir(dir))))
 }
 
-func (app *App) Listen(port int){
+func (app *App) Listen(port uint){
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 	    path := r.URL.Path
 	    method := r.Method

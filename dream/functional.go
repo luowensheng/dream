@@ -1,4 +1,4 @@
-package main
+package dream
 
 func Map[T any, O any](items []T, f func(T)O) []O {
 	output := []O{}

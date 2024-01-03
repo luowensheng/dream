@@ -1,22 +1,25 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"dream/dream"
+)
 
-func Square(value string, onSquareClick func(Record) string) {
+func Square(value string, onSquareClick func(dream.Record) string) {
 
-	buttonRef := El("button").Class("square").Content(value)
-	buttonRef.OnWithParams("click", func(r Record) {
+	buttonRef := dream.El("button").Class("square").Content(value)
+	buttonRef.OnWithParams("click", func(r dream.Record) {
 		buttonRef.SetTextContent(onSquareClick(r))
-	}, Record{"value": buttonRef.getTextContent()},
+	}, dream.Record{"value": buttonRef.GetTextContent()},
 	)
 }
 
 // https://react.dev/learn/tutorial-tic-tac-toe
 
-func Board(xIsNext *DOMVariable[bool], squares *DOMVariable[[]string], onPlay func([]string)) {
+func Board(xIsNext *dream.DOMVariable[bool], squares *dream.DOMVariable[[]string], onPlay func([]string)) {
 
-	winner := newNamedDOMVariable("winner", "")
-	status := newNamedDOMVariable("status", "Next player: X")
+	winner := dream.NewNamedDOMVariable("winner", "")
+	status := dream.NewNamedDOMVariable("status", "Next player: X")
 
 	handleClick := func(i int, value string) {
 		// fmt.Println("i = ", i, "&&", "value = ", value, " -> xIsNext", xIsNext)
@@ -47,14 +50,14 @@ func Board(xIsNext *DOMVariable[bool], squares *DOMVariable[[]string], onPlay fu
 		}
 	})
     
-	El("div").Class("status").DOMContent(status)
+	dream.El("div").Class("status").DOMContent(status)
 
 	for i := 0; i < 3; i++ {
-		El("div").Class("board-row").Inner(func() {
+		dream.El("div").Class("board-row").Inner(func() {
 
 			for j := 0; j < 3; j++ {
 				count := i*3 + j
-				Square(squares.Value()[j], func(params Record) string { 
+				Square(squares.Value()[j], func(params dream.Record) string { 
 					value := params["value"]
 					if value != "" {
 						return value 
@@ -68,7 +71,7 @@ func Board(xIsNext *DOMVariable[bool], squares *DOMVariable[[]string], onPlay fu
 					}
 					squares.UpdateValue(func(s []string) []string {
 						s[count] = newValue
-						fmt.Println("******** squares=$", ToJsonString(s), "--", count, "$***")
+						fmt.Println("******** squares=$", dream.ToJsonString(s), "--", count, "$***")
 						return s
 					})
 					handleClick(count, value)
@@ -81,9 +84,9 @@ func Board(xIsNext *DOMVariable[bool], squares *DOMVariable[[]string], onPlay fu
 
 func Game() {
 
-	LoadCSS("./assets/tictactoe.css")
-	// [][]*DOMVariable[{[]string{}}]
-	history := newNamedDOMVariable("history", [][]string{{}})
+	dream.LoadCSS("./assets/tictactoe.css")
+	// [][]*dream.DOMVariable[{[]string{}}]
+	history := dream.NewNamedDOMVariable("history", [][]string{{}})
 	
 	history.UpdateValue(func(s [][]string) [][]string {
 		for i := 0; i < 9; i++ {
@@ -92,13 +95,13 @@ func Game() {
 		return s
 	})
 
-	currentMove := newNamedDOMVariable("currentMove", 0)
-	xIsNext := newNamedDOMVariable("xIsNext", currentMove.Value() %2 == 0)
+	currentMove := dream.NewNamedDOMVariable("currentMove", 0)
+	xIsNext := dream.NewNamedDOMVariable("xIsNext", currentMove.Value() %2 == 0)
 	currentMove.OnValueUpdated(func(i int) {
 		xIsNext.SetValue(i % 2 == 0)
 		fmt.Println("CURRENT MOVE UPDATED @@@@@@", i, xIsNext.Value(), ")))")
 	})
-	currentSquares := newNamedDOMVariable("currentSquares", history.Value()[currentMove.Value()])
+	currentSquares := dream.NewNamedDOMVariable("currentSquares", history.Value()[currentMove.Value()])
 
 	handlePlay := func(nextSquares []string) {
 		history.UpdateValue(func(s [][]string) [][]string {
@@ -126,18 +129,18 @@ func Game() {
 				description = "Go to game start"
 			}
 
-			El("li").Attr("key", fmt.Sprintf("%d", move)).Inner(func() {
-				El("button").Content(description).On("click", func() { jumpTo(move) })
+			dream.El("li").Attr("key", fmt.Sprintf("%d", move)).Inner(func() {
+				dream.El("button").Content(description).On("click", func() { jumpTo(move) })
 			})
 		}
 	}
 
-	El("div").Class("game").Inner(func() {
-		El("div").Class("game-board").Inner(func() {
+	dream.El("div").Class("game").Inner(func() {
+		dream.El("div").Class("game-board").Inner(func() {
 			Board(xIsNext, currentSquares, handlePlay)
 		})
-		El("div").Class("game-info").Inner(func() {
-			El("ol").Inner(moves)
+		dream.El("div").Class("game-info").Inner(func() {
+			dream.El("ol").Inner(moves)
 		})
 	})
 
@@ -171,5 +174,5 @@ func calculateWinner(squares []string) string {
 }
 
 func TicTacToe() {
-	CreateApp("TicTacToe", Game)
+	dream.CreateApp("TicTacToe", 9090, Game)
 }
