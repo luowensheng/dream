@@ -8,7 +8,6 @@ import (
 	"net/http"
 )
 
-
 type Handler = func(http.ResponseWriter, *http.Request)
 
 type App struct { endpoints map[string]Handler }

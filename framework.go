@@ -30,7 +30,7 @@ type ServerResponse struct {
 type EventHandler = func(Record)
 
 type domVariableResponse struct {
-	Name string `json:"name"`
+	Name  string `json:"name"`
 	Value string `json:"value"`
 }
 type Manager struct {
@@ -39,17 +39,16 @@ type Manager struct {
 	commands     []jsCommand
 	events       map[string]EventHandler
 	broacasts    map[string][]EventHandler
-	context map[string]string
+	context      map[string]string
 }
 
-var MANAGER Manager = Manager{context: map[string]string{},setChild: nil, firstElement: nil, events: map[string]EventHandler{}, broacasts: map[string][]EventHandler{}}
+var MANAGER Manager = Manager{context: map[string]string{}, setChild: nil, firstElement: nil, events: map[string]EventHandler{}, broacasts: map[string][]EventHandler{}}
 var COUNTER int = 0
 
 func (manager *Manager) reset() {
 	manager.setChild = nil
 	manager.firstElement = nil
 }
-
 
 func (manager *Manager) handle(jsResponse *JSResponse) ServerResponse {
 
@@ -67,7 +66,7 @@ func (manager *Manager) handle(jsResponse *JSResponse) ServerResponse {
 	}
 
 	manager.ResetCommands()
-    manager.context = make(map[string]string)
+	manager.context = make(map[string]string)
 	context := jsResponse.Params["dom"]
 
 	var data []domVariableResponse
@@ -216,7 +215,7 @@ type Comparable = interface{}
 type DOMVariable[T Comparable] struct {
 	// state *State[T]
 	value T
-	name string
+	name  string
 	tasks []func(T)
 }
 
@@ -231,17 +230,17 @@ func ToJsonString[T any](value T) string {
 	if err != nil {
 		log.Fatal(err)
 	}
-    return string(bytes)
+	return string(bytes)
 }
 func SetDOMVariableCommand[T Comparable](name string, value T) string {
 
-    cmd := fmt.Sprintf("setDOMVariable('%s', %s)", name, ToJsonString(value))
+	cmd := fmt.Sprintf("setDOMVariable('%s', %s)", name, ToJsonString(value))
 	fmt.Println(">>>>", cmd, "<<<<<")
 	return cmd
 }
 func NewNamedDOMVariable[T Comparable](name string, value T) *DOMVariable[T] {
 
-    cmd := SetDOMVariableCommand(name, value)
+	cmd := SetDOMVariableCommand(name, value)
 	fmt.Println(cmd, name)
 	ExecuteJS(cmd)
 
@@ -257,7 +256,7 @@ func NewNamedDOMVariable[T Comparable](name string, value T) *DOMVariable[T] {
 	return item
 }
 
-//////////////////////////////////
+// ////////////////////////////////
 func (variable DOMVariable[T]) String() string {
 	return fmt.Sprint(variable.value)
 }
@@ -276,7 +275,7 @@ func (variable *DOMVariable[T]) SetValue(newValue T) {
 	if fmt.Sprint(variable.value) == fmt.Sprint(newValue) {
 		return
 	}
-	fmt.Println("\n\n\n changing '",variable.name ,"'from ", ToJsonString(variable.value)," to ", ToJsonString(newValue)," \n\n ")
+	fmt.Println("\n\n\n changing '", variable.name, "'from ", ToJsonString(variable.value), " to ", ToJsonString(newValue), " \n\n ")
 	variable.value = newValue
 	Each(variable.tasks, func(task func(T)) {
 		task(variable.value)
@@ -291,7 +290,7 @@ func (variable *DOMVariable[T]) UpdateValue(f func(T) T) {
 	variable.SetValue(f(variable.value))
 }
 
-///////////////////////////////////
+// /////////////////////////////////
 func (state State[T]) String() string {
 	return fmt.Sprint(state.value)
 }
@@ -318,7 +317,6 @@ func (state *State[T]) UpdateValue(f func(T) T) {
 func UseState[T any](value T) *State[T] {
 	return &State[T]{value: value}
 }
-
 
 func (elementRef *ElementRef) DOMContent(content *DOMVariable[string]) *ElementRef {
 
@@ -586,7 +584,7 @@ func CreateHTML(title string, app func()) string {
 
 	El("body").Inner(func() {
 
-		LoadJS("./assets/index.js")
+		El("script").Content(fmt.Sprintf("\n%s\n", jsCONTENT))
 
 		app()
 
@@ -615,6 +613,17 @@ func CreateHTML(title string, app func()) string {
 %s
 		`, title, appHTML,
 	)
+
+	dirPath := "./output"
+
+	// Check if the directory already exists
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		// If the directory doesn't exist, create it
+		err := os.Mkdir(dirPath, 0755) // 0755 is the permission mode
+		if err != nil {
+			log.Fatal("Error creating directory:", err)
+		}
+	} 
 
 	err := os.WriteFile("./output/index.html", []byte(html), 0644)
 	if err != nil {

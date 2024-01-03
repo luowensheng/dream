@@ -84,7 +84,7 @@ func Board(xIsNext *dream.DOMVariable[bool], squares *dream.DOMVariable[[]string
 
 func Game() {
 
-	dream.LoadCSS("./assets/tictactoe.css")
+	// dream.LoadCSS("./assets/tictactoe.css")
 	// [][]*dream.DOMVariable[{[]string{}}]
 	history := dream.NewNamedDOMVariable("history", [][]string{{}})
 	
