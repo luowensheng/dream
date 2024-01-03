@@ -1,8 +1,8 @@
-package main
+package demo
 
 import (
 	"fmt"
-	"dream/dream"
+	"dream"
 )
 
 func Square(value string, onSquareClick func(dream.Record) string) {

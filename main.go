@@ -1,10 +1,12 @@
-package main
+package dream
+
+// import (
+// 	"dream/internal/demo"
+// )
 
 
 
-
-
-func main() {
-	// Demo()
-	TicTacToe()
-}
+// func main() {
+// 	// Demo()
+// 	demo.TicTacToe()
+// }

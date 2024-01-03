@@ -1,9 +1,9 @@
-package main
+package demo
 
 import (
 	"fmt"
 	"strconv"
-	"dream/dream"
+	"dream"
 )
 
 var ALIEN_IMAGES = []string{
