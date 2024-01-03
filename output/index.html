@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>TicTacToe</title>
+</head>
+<body id="body-element-0">
+	<script id="script-element-1">
+
+// https://blog.risingstack.com/writing-a-javascript-framework-sandboxed-code-evaluation/. Eval alternatives
+const DOM_VARIBLES = new Map()
+
+function setDOMVariable(name, value) {
+    DOM_VARIBLES.set(name, value)
+}
+
+function getDOMVariable(name) {
+    return DOM_VARIBLES.get(name) || null
+}
+
+function getAllDOMVariables() {
+    return JSON.stringify([...DOM_VARIBLES.keys()].map(k => {
+        return {name:k, value: JSON.stringify(DOM_VARIBLES.get(k)) }
+    }))
+}
+
+
+function showVariables() {
+    console.log(JSON.parse(getAllDOMVariables()))
+}
+async function callBackend(funcName, params, event) {
+    const response = await fetch("/api/v1/call", {
+        method: "POST",
+        body: JSON.stringify({"call": funcName, "params": params || {}})
+    });
+    const data = await response.json();
+
+    if (data.success){
+        handleServerCommand(data.commands, event)
+    } else {
+        console.error(data.message)
+    }
+}
+
+function handleServerCommand(commands, event){
+    if (!commands){
+        return;
+    }
+    console.log({commands})
+    let onComplete = [];
+
+    for (let command of commands ){
+        let key = command.type;
+        try {
+            switch (key) {
+                case "execute":
+                    let result = eval(command.command);
+                    console.log({result});
+                    break;
+                case "execute-after":
+                    console.log({after: command.command});
+                    onComplete.push(()=>eval(command.command));
+                    break;
+                case "html":
+                    resetHTML(command.command);
+                    break;                          
+                default:
+                    console.error({key, command: command.command})
+                    break;
+            } 
+        } catch (error) {
+            console.error({error})
+            console.log({command})
+            callBackend('error', {error: `${error}`, command})
+        }
+
+    }
+
+    for (const f of onComplete) {
+        f()
+    }
+}
+</script>
+	<style id="style-element-2">
+* {
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: sans-serif;
+    margin: 20px;
+    padding: 0;
+  }
+  
+  h1 {
+    margin-top: 0;
+    font-size: 22px;
+  }
+  
+  h2 {
+    margin-top: 0;
+    font-size: 20px;
+  }
+  
+  h3 {
+    margin-top: 0;
+    font-size: 18px;
+  }
+  
+  h4 {
+    margin-top: 0;
+    font-size: 16px;
+  }
+  
+  h5 {
+    margin-top: 0;
+    font-size: 14px;
+  }
+  
+  h6 {
+    margin-top: 0;
+    font-size: 12px;
+  }
+  
+  code {
+    font-size: 1.2em;
+  }
+  
+  ul {
+    padding-inline-start: 20px;
+  }
+  
+  * {
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: sans-serif;
+    margin: 20px;
+    padding: 0;
+  }
+  
+  .square {
+    background: #fff;
+    border: 1px solid #999;
+    float: left;
+    font-size: 24px;
+    font-weight: bold;
+    line-height: 34px;
+    height: 34px;
+    margin-right: -1px;
+    margin-top: -1px;
+    padding: 0;
+    text-align: center;
+    width: 34px;
+  }
+  
+  .board-row:after {
+    clear: both;
+    content: '';
+    display: table;
+  }
+  
+  .status {
+    margin-bottom: 10px;
+  }
+  
+  .game {
+    display: flex;
+    flex-direction: row;
+  }
+  
+  .game-info {
+    margin-left: 20px;
+  }
+  
+</style>
+	<div id="div-element-3" class="game">
+	<div id="div-element-4" class="game-board">
+	<div id="div-element-5" class="status">Next player: X</div>
+	<div id="div-element-6" class="board-row">
+	<button id="button-element-7" class="square"></button>
+	<button id="button-element-9" class="square"></button>
+	<button id="button-element-11" class="square"></button>
+</div>
+	<div class="board-row" id="div-element-13">
+	<button id="button-element-14" class="square"></button>
+	<button id="button-element-16" class="square"></button>
+	<button id="button-element-18" class="square"></button>
+</div>
+	<div id="div-element-20" class="board-row">
+	<button id="button-element-21" class="square"></button>
+	<button id="button-element-23" class="square"></button>
+	<button id="button-element-25" class="square"></button>
+</div>
+</div>
+	<div id="div-element-27" class="game-info">
+	<ol id="ol-element-28">
+	<li key="0" id="li-element-29">
+	<button id="button-element-30">Go to game start</button>
+</li>
+</ol>
+</div>
+</div>
+	<script id="script-element-32">document.addEventListener('DOMContentLoaded', async()=>{handleServerCommand([{"type":"execute","command":"setDOMVariable('history', [[]])"},{"type":"execute","command":"setDOMVariable('currentMove', 0)"},{"type":"execute","command":"setDOMVariable('xIsNext', true)"},{"type":"execute","command":"setDOMVariable('currentSquares', [\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\"])"},{"type":"execute","command":"setDOMVariable('winner', \"\")"},{"type":"execute","command":"setDOMVariable('status', \"Next player: X\")"},{"type":"execute","command":"document.getElementById(`button-element-7`).addEventListener('click', function(event){\n\t\t\t\tconst data = {dom: getAllDOMVariables()};\ndata['value']=document.getElementById(`button-element-7`).textContent;\n\t\t\t\tcallBackend('click_8', data, event);\n\t\t\t})\n\t\t"},{"type":"execute","command":"document.getElementById(`button-element-9`).addEventListener('click', function(event){\n\t\t\t\tconst data = {dom: getAllDOMVariables()};\ndata['value']=document.getElementById(`button-element-9`).textContent;\n\t\t\t\tcallBackend('click_10', data, event);\n\t\t\t})\n\t\t"},{"type":"execute","command":"document.getElementById(`button-element-11`).addEventListener('click', function(event){\n\t\t\t\tconst data = {dom: getAllDOMVariables()};\ndata['value']=document.getElementById(`button-element-11`).textContent;\n\t\t\t\tcallBackend('click_12', data, event);\n\t\t\t})\n\t\t"},{"type":"execute","command":"document.getElementById(`button-element-14`).addEventListener('click', function(event){\n\t\t\t\tconst data = {dom: getAllDOMVariables()};\ndata['value']=document.getElementById(`button-element-14`).textContent;\n\t\t\t\tcallBackend('click_15', data, event);\n\t\t\t})\n\t\t"},{"type":"execute","command":"document.getElementById(`button-element-16`).addEventListener('click', function(event){\n\t\t\t\tconst data = {dom: getAllDOMVariables()};\ndata['value']=document.getElementById(`button-element-16`).textContent;\n\t\t\t\tcallBackend('click_17', data, event);\n\t\t\t})\n\t\t"},{"type":"execute","command":"document.getElementById(`button-element-18`).addEventListener('click', function(event){\n\t\t\t\tconst data = {dom: getAllDOMVariables()};\ndata['value']=document.getElementById(`button-element-18`).textContent;\n\t\t\t\tcallBackend('click_19', data, event);\n\t\t\t})\n\t\t"},{"type":"execute","command":"document.getElementById(`button-element-21`).addEventListener('click', function(event){\n\t\t\t\tconst data = {dom: getAllDOMVariables()};\ndata['value']=document.getElementById(`button-element-21`).textContent;\n\t\t\t\tcallBackend('click_22', data, event);\n\t\t\t})\n\t\t"},{"type":"execute","command":"document.getElementById(`button-element-23`).addEventListener('click', function(event){\n\t\t\t\tconst data = {dom: getAllDOMVariables()};\ndata['value']=document.getElementById(`button-element-23`).textContent;\n\t\t\t\tcallBackend('click_24', data, event);\n\t\t\t})\n\t\t"},{"type":"execute","command":"document.getElementById(`button-element-25`).addEventListener('click', function(event){\n\t\t\t\tconst data = {dom: getAllDOMVariables()};\ndata['value']=document.getElementById(`button-element-25`).textContent;\n\t\t\t\tcallBackend('click_26', data, event);\n\t\t\t})\n\t\t"},{"type":"execute","command":"document.getElementById(`button-element-30`).addEventListener(`click`, function(event){callBackend(`click_31`, {}, event);})"}]);} )</script>
+</body>
+		

@@ -1,0 +1,43 @@
+body {
+    background-color: black;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    gap: 50px;
+    height: 100%;
+}
+
+img {
+    width: 400px;
+    height: 400px;
+}
+
+.center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.click-button {
+    border: 2px solid white;
+}
+
+.invisible {
+    opacity: 0;
+}
+
+.main-img::before {
+    content: "Click to make it invisible";
+    color: white;
+    font-weight: bold;
+    font-size: 30pt;
+}
+
+.main-img::after {
+    content: "Click to make it invisible";
+    color: white;
+    font-weight: bold;
+    font-size: 30pt;
+}
