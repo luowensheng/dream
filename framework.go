@@ -413,35 +413,23 @@ func (elementRef *ElementRef) OnWithParams(eventName string, f func(Record), par
 	eventId := generateUniqueName(eventName)
 
 	paramsStr := "const data = {dom: getAllDOMVariables()};"
+	tag := ""
+	value := ""
 	for key := range params {
-		paramsStr = fmt.Sprintf("%s\ndata['%s']=%s", paramsStr, key, params[key])
+		value = strings.TrimSpace(params[key])
+		if tag == "" && strings.HasPrefix(value, "await"){
+			tag = "async "
+		}
+		paramsStr = fmt.Sprintf("%s\ndata['%s']=%s", paramsStr, key, value)
 	}
 	MANAGER.addEvent(eventId, f)
 	elementRef.ExecuteJS(
 		fmt.Sprintf(
-			`{this}.addEventListener('%s', function(event){
+			`{this}.addEventListener('%s', %sfunction(event){
 				%s
 				callBackend('%s', data, event);
 			})
-		`, eventName, paramsStr, eventId),
-	)
-}
-
-func (elementRef *ElementRef) OnWithParamsAsync(eventName string, f func(Record), params Record) {
-	eventId := generateUniqueName(eventName)
-
-	paramsStr := "const data = {dom: getAllDOMVariables()};"
-	for key := range params {
-		paramsStr = fmt.Sprintf("%s\ndata['%s']=%s", paramsStr, key, params[key])
-	}
-	MANAGER.addEvent(eventId, f)
-	elementRef.ExecuteJS(
-		fmt.Sprintf(
-			`{this}.addEventListener('%s', async function(event){
-				%s
-				callBackend('%s', data, event);
-			})
-		`, eventName, paramsStr, eventId),
+		`, eventName, tag, paramsStr, eventId),
 	)
 }
 
