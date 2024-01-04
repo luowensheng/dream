@@ -66,7 +66,7 @@ function handleServerCommand(commands, event){
         } catch (error) {
             console.error({error})
             console.log({command})
-            callBackend('error', {error: error.toString()}, command})
+            callBackend('error', {error: error.toString(), command})
         }
 
     }
