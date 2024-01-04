@@ -427,6 +427,24 @@ func (elementRef *ElementRef) OnWithParams(eventName string, f func(Record), par
 	)
 }
 
+func (elementRef *ElementRef) OnWithParamsAsync(eventName string, f func(Record), params Record) {
+	eventId := generateUniqueName(eventName)
+
+	paramsStr := "const data = {dom: getAllDOMVariables()};"
+	for key := range params {
+		paramsStr = fmt.Sprintf("%s\ndata['%s']=%s", paramsStr, key, params[key])
+	}
+	MANAGER.addEvent(eventId, f)
+	elementRef.ExecuteJS(
+		fmt.Sprintf(
+			`{this}.addEventListener('%s', async function(event){
+				%s
+				callBackend('%s', data, event);
+			})
+		`, eventName, paramsStr, eventId),
+	)
+}
+
 func (elementRef *ElementRef) BroadcastWithParams(name, eventName string, params Record) {
 	eventId := generateUniqueName(eventName)
 
