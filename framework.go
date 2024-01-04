@@ -463,7 +463,7 @@ func createParamRegex(paramName string) string {
 	return "{\\s*" + paramName + "\\s*}"
 }
 
-func (elementRef *ElementRef) createQueryFromCommand(command string) string {
+func (elementRef *ElementRef) CreateQueryFromCommand(command string) string {
 	regex := regexp.MustCompile(createParamRegex("this"))
 	query := fmt.Sprintf("document.getElementById(`%s`)", elementRef.id)
 	return regex.ReplaceAllString(command, query)
@@ -472,24 +472,24 @@ func (elementRef *ElementRef) createQueryFromCommand(command string) string {
 func (elementRef *ElementRef) ExecuteJS(command string) {
 	MANAGER.addCommand(jsCommand{
 		CommandType: "execute",
-		Command:     elementRef.createQueryFromCommand(command),
+		Command:     elementRef.CreateQueryFromCommand(command),
 	})
 }
 
 func (elementRef *ElementRef) GetTextContent() string {
-	return elementRef.createQueryFromCommand("{this}.textContent;")
+	return elementRef.CreateQueryFromCommand("{this}.textContent;")
 }
 
 func (elementRef *ElementRef) GetValue() string {
-	return elementRef.createQueryFromCommand("{this}.value;")
+	return elementRef.CreateQueryFromCommand("{this}.value;")
 }
 
 func (elementRef *ElementRef) GetAttribute(key string) string {
-	return elementRef.createQueryFromCommand(fmt.Sprintf("{this}.getAttribute('%s');", key))
+	return elementRef.CreateQueryFromCommand(fmt.Sprintf("{this}.getAttribute('%s');", key))
 }
 
 func (elementRef *ElementRef) GetStyle(key string) string {
-	return elementRef.createQueryFromCommand(fmt.Sprintf("{this}.style['%s'];", key))
+	return elementRef.CreateQueryFromCommand(fmt.Sprintf("{this}.style['%s'];", key))
 }
 
 func (elementRef *ElementRef) SetTextContent(textContent string) {
