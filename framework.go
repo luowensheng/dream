@@ -409,6 +409,18 @@ func (elementRef *ElementRef) Broadcast(name, eventName string) {
 	)
 }
 
+func (elementRef *ElementRef) RemoveListenersForEvent(event string) {
+	elementRef.ExecuteJS(fmt.Sprintf(`
+	const listeners = {this}.events && {this}.events[%s];
+
+	// Remove each click event listener
+	if (listeners && listeners.length > 0) {
+		for (const i = 0; i < listeners.length; i++) {
+			{this}.removeEventListener("%s", listeners[i]);
+		}
+	}`, event, event))
+}
+
 func (elementRef *ElementRef) OnWithParams(eventName string, f func(Record), params Record) {
 	eventId := generateUniqueName(eventName)
 
