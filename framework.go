@@ -475,6 +475,9 @@ func (elementRef *ElementRef) ExecuteJS(command string) {
 		Command:     elementRef.CreateQueryFromCommand(command),
 	})
 }
+func (elementRef *ElementRef) This(command string) string {
+	return elementRef.CreateQueryFromCommand(fmt.Sprintf("{this}.%v;", command))
+}
 
 func (elementRef *ElementRef) GetTextContent() string {
 	return elementRef.CreateQueryFromCommand("{this}.textContent;")
