@@ -3,7 +3,7 @@ package dream
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -682,7 +682,7 @@ func CreateApp(title string, port uint, app func()) {
 	server.Route("POST", "/api/v1/call", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		bytes, err := ioutil.ReadAll(r.Body)
+		bytes, err := io.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, "Can't read Body", http.StatusBadRequest)
 			return
