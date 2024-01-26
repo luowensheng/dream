@@ -58,7 +58,7 @@ func (manager *Manager) handle(jsResponse *JSResponse) ServerResponse {
 	if handler == nil {
 		if jsResponse.Call == "error" {
 			response.Success = true
-			fmt.Println("ERROR: ", jsResponse.Params)
+			// fmt.Println("ERROR: ", jsResponse.Params)
 		} else {
 			response.Message = fmt.Sprintf("No handler for \"%s\" was not found", jsResponse.Call)
 		}
@@ -235,13 +235,13 @@ func ToJsonString[T any](value T) string {
 func SetDOMVariableCommand[T Comparable](name string, value T) string {
 
 	cmd := fmt.Sprintf("setDOMVariable('%s', %s)", name, ToJsonString(value))
-	fmt.Println(">>>>", cmd, "<<<<<")
+	// fmt.Println(">>>>", cmd, "<<<<<")
 	return cmd
 }
 func NewNamedDOMVariable[T Comparable](name string, value T) *DOMVariable[T] {
 
 	cmd := SetDOMVariableCommand(name, value)
-	fmt.Println(cmd, name)
+	// fmt.Println(cmd, name)
 	ExecuteJS(cmd)
 
 	item := &DOMVariable[T]{value: value, name: name}
@@ -249,7 +249,7 @@ func NewNamedDOMVariable[T Comparable](name string, value T) *DOMVariable[T] {
 		json.Marshal(t)
 
 		ExecuteJS(SetDOMVariableCommand(name, t))
-		fmt.Println("*^^*^*^*^*^*^*^*^*^*^*^*^*")
+		// fmt.Println("*^^*^*^*^*^*^*^*^*^*^*^*^*")
 
 		// fmt.Println("\n\nUPDATED %%BBBBBerwerw\n", name, t, "\n\n")
 	})
@@ -275,7 +275,7 @@ func (variable *DOMVariable[T]) SetValue(newValue T) {
 	if fmt.Sprint(variable.value) == fmt.Sprint(newValue) {
 		return
 	}
-	fmt.Println("\n\n\n changing '", variable.name, "'from ", ToJsonString(variable.value), " to ", ToJsonString(newValue), " \n\n ")
+	// fmt.Println("\n\n\n changing '", variable.name, "'from ", ToJsonString(variable.value), " to ", ToJsonString(newValue), " \n\n ")
 	variable.value = newValue
 	Each(variable.tasks, func(task func(T)) {
 		task(variable.value)
@@ -574,11 +574,14 @@ func LoadHTML(localPath string) {
 	El("*").Content(fmt.Sprintf("\n%s\n", content))
 }
 
+func isLocalPath(path string) bool {
+	return strings.HasPrefix(path, "./")
+}
+
 func LoadJS(path string) {
 
-	if strings.HasPrefix(path, "http") {
+	if !isLocalPath(path) {
 		El("script").Attr("src", path)
-
 	} else {
 		content, err := ReadFile(path)
 		if err != nil {
@@ -590,8 +593,8 @@ func LoadJS(path string) {
 
 func LoadCSS(path string) {
 
-	if strings.HasPrefix(path, "http") {
-		El("link").Attr("rel", "stylesheet").Attr("href", path)
+	if !strings.HasPrefix(path, "./") {
+		El("link").Attr("rel", "stylesheet").Attr("href", path)	
 	} else {
 		content, err := ReadFile(path)
 		if err != nil {
@@ -599,6 +602,16 @@ func LoadCSS(path string) {
 		}
 		El("style").Content(fmt.Sprintf("\n%s\n", content))
 	}
+
+	// if !isLocalPath(path) {
+	// 	El("link").Attr("rel", "stylesheet").Attr("href", path)	
+	// } else {
+	// 	content, err := ReadFile(path)
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	El("style").Content(fmt.Sprintf("\n%s\n", content))
+	// }
 }
 
 func CreateHTML(title string, app func()) string {
@@ -663,7 +676,7 @@ func CreateApp(title string, port uint, app func()) {
 	server.Expose("/static/", "./public")
 
 	server.Route("GET", "/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, html)
+		fmt.Fprint(w, html)
 	})
 
 	server.Route("POST", "/api/v1/call", func(w http.ResponseWriter, r *http.Request) {
@@ -675,7 +688,7 @@ func CreateApp(title string, port uint, app func()) {
 			return
 		}
 
-		fmt.Println(string(bytes[:]))
+		// fmt.Println(string(bytes[:]))
 		data := JSResponse{}
 		if err := json.Unmarshal(bytes, &data); err != nil {
 			http.Error(w, "Invalid json", http.StatusBadRequest)
