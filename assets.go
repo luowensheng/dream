@@ -46,6 +46,7 @@ function handleServerCommand(commands, event){
 
     for (let command of commands ){
         let key = command.type;
+        console.log({command})
         try {
             switch (key) {
                 case "execute":

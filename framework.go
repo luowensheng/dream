@@ -16,12 +16,12 @@ type jsCommand struct {
 	Command     string `json:"command"`
 }
 
-type JSResponse struct {
+type jSResponse struct {
 	Call   string `json:"call"`
 	Params Record `json:"params"`
 }
 
-type ServerResponse struct {
+type serverResponse struct {
 	Success  bool        `json:"success"`
 	Message  string      `json:"message"`
 	Commands []jsCommand `json:"commands"`
@@ -33,39 +33,71 @@ type domVariableResponse struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
 }
-type Manager struct {
+
+type elementCreator struct {
 	setChild     func(*Element)
 	firstElement *Element
+}
+
+func newCreator() *elementCreator {
+	return &elementCreator{
+		setChild:     nil,
+		firstElement: nil,
+	}
+}
+
+type PageContext struct {
+	*elementCreator
 	commands     []jsCommand
 	events       map[string]EventHandler
 	broacasts    map[string][]EventHandler
 	context      map[string]string
+	hasExcecuted bool
 }
 
-var MANAGER Manager = Manager{context: map[string]string{}, setChild: nil, firstElement: nil, events: map[string]EventHandler{}, broacasts: map[string][]EventHandler{}}
+func createManager() *PageContext {
+	return &PageContext{
+		context:      map[string]string{},
+		elementCreator:      newCreator(),
+		events:       map[string]EventHandler{},
+		broacasts:    map[string][]EventHandler{},
+		hasExcecuted: false,
+	}
+}
+
+func (p *PageContext)clone() *PageContext {
+	return &PageContext{
+		context:      p.context,
+		elementCreator:      newCreator(),
+		events:       p.events,
+		broacasts:    p.broacasts,
+		hasExcecuted: false,
+	}
+}
+
+
 var COUNTER int = 0
 
-func (manager *Manager) reset() {
+func (manager *PageContext) reset() {
 	manager.setChild = nil
 	manager.firstElement = nil
 }
 
-func (manager *Manager) handle(jsResponse *JSResponse) ServerResponse {
+func (manager *PageContext) handle(jsResponse *jSResponse) serverResponse {
 
-	response := ServerResponse{Success: false}
+	response := serverResponse{Success: false}
 
 	handler := manager.events[jsResponse.Call]
 	if handler == nil {
 		if jsResponse.Call == "error" {
 			response.Success = true
-			// fmt.Println("ERROR: ", jsResponse.Params)
 		} else {
 			response.Message = fmt.Sprintf("No handler for \"%s\" was not found", jsResponse.Call)
 		}
 		return response
 	}
 
-	manager.ResetCommands()
+	manager.resetCommands()
 	manager.context = make(map[string]string)
 	context := jsResponse.Params["dom"]
 
@@ -84,36 +116,33 @@ func (manager *Manager) handle(jsResponse *JSResponse) ServerResponse {
 	return response
 }
 
-func (manager *Manager) ResetCommands() {
+func (manager *PageContext) resetCommands() {
 	manager.commands = []jsCommand{}
 }
 
-func (manager *Manager) addCommand(command jsCommand) {
+func (manager *PageContext) addCommand(command jsCommand) {
 	manager.commands = append(manager.commands, command)
 }
 
-func (manager *Manager) addEvent(name string, handler EventHandler) {
+func (manager *PageContext) addEvent(name string, handler EventHandler) {
 	manager.events[name] = handler
 }
 
-func (manager *Manager) removeEvent(name string) {
+func (manager *PageContext) removeEvent(name string) {
 	delete(manager.events, name)
 }
 
-func (manager *Manager) addBroadcastIfNotExists(name string) {
+func (manager *PageContext) addBroadcastIfNotExists(name string) {
 	if manager.broacasts[name] == nil {
 		manager.broacasts[name] = []func(Record){}
 	}
 }
 
-func (manager *Manager) addBroadcastListener(name string, handler EventHandler) {
+func (manager *PageContext) addBroadcastListener(name string, handler EventHandler) {
 	manager.addBroadcastIfNotExists(name)
 	manager.broacasts[name] = append(manager.broacasts[name], handler)
 }
 
-// type Optional[T interface{}] struct {
-// 	data T
-// }
 
 type Record = map[string]string
 
@@ -122,6 +151,7 @@ type Element struct {
 	TextContent string
 	attributes  Record
 	Children    []*Element
+	ref *ElementRef
 }
 
 func nextCount() int {
@@ -167,13 +197,28 @@ type A = Record
 type ElementRef struct {
 	element *Element
 	id      string
+	manager *PageContext
 }
 
-func ExecuteJS(command string) {
-	MANAGER.addCommand(jsCommand{CommandType: "execute", Command: command})
+func (e *ElementRef)clone() *ElementRef {
+
+	elementClone := Element{}
+	elementClone.attributes = e.element.attributes
+	elementClone.Children = []*Element{}
+	elementClone.Tag = e.element.Tag
+	elementClone.TextContent = e.element.TextContent
+	
+	return &ElementRef{
+		element: &elementClone,
+		id: e.id,
+	}
 }
 
-func ExecuteWithResponse(command string, f func(string)) {
+func (manager *PageContext) ExecuteJS(command string) {
+	manager.addCommand(jsCommand{CommandType: "execute", Command: command})
+}
+
+func (manager *PageContext) ExecuteWithResponse(command string, f func(string)) {
 
 	eventId := generateUniqueName("execute")
 
@@ -183,15 +228,14 @@ func ExecuteWithResponse(command string, f func(string)) {
 
 	for key := range params {
 		paramsStr = fmt.Sprintf("%s\ndata['%s']=%s", paramsStr, key, params[key])
-
 	}
 
-	MANAGER.addEvent(eventId, func(r Record) {
+	manager.addEvent(eventId, func(r Record) {
 		f(r["output"])
-		MANAGER.removeEvent(eventId)
+		manager.removeEvent(eventId)
 	})
 
-	ExecuteJS(
+	manager.ExecuteJS(
 		fmt.Sprintf(
 			`{
 				%s;
@@ -213,16 +257,11 @@ type State[T any] struct {
 type Comparable = interface{}
 
 type DOMVariable[T Comparable] struct {
-	// state *State[T]
-	value T
-	name  string
-	tasks []func(T)
+	value   T
+	name    string
+	tasks   []func(T)
+	manager *PageContext
 }
-
-// func newDOMVariable[T Comparable](value T) *DOMVariable[T] {
-// 	name := generateUniqueName("domvariable")
-// 	return newNamedDOMVariable(name, value)
-// }
 
 func ToJsonString[T any](value T) string {
 	bytes, err := json.Marshal(value)
@@ -232,27 +271,24 @@ func ToJsonString[T any](value T) string {
 	}
 	return string(bytes)
 }
+
 func SetDOMVariableCommand[T Comparable](name string, value T) string {
 
 	cmd := fmt.Sprintf("setDOMVariable('%s', %s)", name, ToJsonString(value))
-	// fmt.Println(">>>>", cmd, "<<<<<")
 	return cmd
 }
-func NewNamedDOMVariable[T Comparable](name string, value T) *DOMVariable[T] {
+func NewNamedDOMVariable[T Comparable](manager *PageContext, name string, value T) *DOMVariable[T] {
 
 	cmd := SetDOMVariableCommand(name, value)
-	// fmt.Println(cmd, name)
-	ExecuteJS(cmd)
+	manager.ExecuteJS(cmd)
 
-	item := &DOMVariable[T]{value: value, name: name}
+	item := &DOMVariable[T]{value: value, name: name, manager: manager}
 	item.OnValueUpdated(func(t T) {
 		json.Marshal(t)
 
-		ExecuteJS(SetDOMVariableCommand(name, t))
-		// fmt.Println("*^^*^*^*^*^*^*^*^*^*^*^*^*")
-
-		// fmt.Println("\n\nUPDATED %%BBBBBerwerw\n", name, t, "\n\n")
+		manager.ExecuteJS(SetDOMVariableCommand(name, t))
 	})
+
 	return item
 }
 
@@ -262,12 +298,12 @@ func (variable DOMVariable[T]) String() string {
 }
 
 func (variable *DOMVariable[T]) Value() T {
-	value, ok := MANAGER.context[variable.name]
+	value, ok := variable.manager.context[variable.name]
 	if !ok {
 		return variable.value
 	}
 	json.Unmarshal([]byte(value), &variable.value)
-	delete(MANAGER.context, variable.name)
+	delete(variable.manager.context, variable.name)
 	return variable.value
 }
 
@@ -275,7 +311,6 @@ func (variable *DOMVariable[T]) SetValue(newValue T) {
 	if fmt.Sprint(variable.value) == fmt.Sprint(newValue) {
 		return
 	}
-	// fmt.Println("\n\n\n changing '", variable.name, "'from ", ToJsonString(variable.value), " to ", ToJsonString(newValue), " \n\n ")
 	variable.value = newValue
 	Each(variable.tasks, func(task func(T)) {
 		task(variable.value)
@@ -369,16 +404,48 @@ func (elementRef *ElementRef) Inner(f func()) {
 }
 
 func (elementRef *ElementRef) InnerRef(f func(*ElementRef)) {
+
 	if elementRef.element == nil {
 		f(elementRef)
 		return
 	}
-	setChild := MANAGER.setChild
-	MANAGER.setChild = func(e *Element) {
+
+	setChild := elementRef.manager.setChild
+	elementRef.manager.setChild = func(e *Element) {
 		elementRef.element.Children = append(elementRef.element.Children, e)
 	}
 	f(elementRef)
-	MANAGER.setChild = setChild
+	elementRef.manager.setChild = setChild
+}
+
+func (e *ElementRef) UpdateInner(f func(newContext *PageContext)) {
+
+	manager := e.manager.clone()
+
+	elementRef := e.clone()
+
+	elementRef.manager = manager
+
+	if elementRef.element == nil {
+		f(manager)
+		return
+	}
+
+	setChild := elementRef.manager.setChild
+	elementRef.manager.setChild = func(e *Element) {
+		elementRef.element.Children = append(elementRef.element.Children, e)
+	}
+	f(manager)
+	elementRef.manager.setChild = setChild
+
+	e.SetInnerHTML(elementRef.element.String())
+
+	e.manager.commands = append(e.manager.commands, manager.commands...)
+
+	elementRef.manager = e.manager
+	for _, child := range elementRef.element.Children {
+		child.ref.manager = e.manager
+	}
 }
 
 func generateUniqueName(name string) string {
@@ -388,7 +455,7 @@ func generateUniqueName(name string) string {
 func (elementRef *ElementRef) On(eventName string, f func()) *ElementRef {
 	eventId := generateUniqueName(eventName)
 
-	MANAGER.addEvent(eventId, func(r Record) { f() })
+	elementRef.manager.addEvent(eventId, func(r Record) { f() })
 	elementRef.ExecuteJS(
 		fmt.Sprintf("{this}.addEventListener(`%s`, function(event){callBackend(`%s`, {}, event);})", eventName, eventId),
 	)
@@ -398,10 +465,10 @@ func (elementRef *ElementRef) On(eventName string, f func()) *ElementRef {
 func (elementRef *ElementRef) Broadcast(name, eventName string) {
 	eventId := generateUniqueName(eventName)
 
-	MANAGER.addBroadcastIfNotExists(name)
-	MANAGER.addEvent(eventId, func(r Record) {
-		for i := range MANAGER.broacasts[name] {
-			MANAGER.broacasts[name][i](r)
+	elementRef.manager.addBroadcastIfNotExists(name)
+	elementRef.manager.addEvent(eventId, func(r Record) {
+		for i := range elementRef.manager.broacasts[name] {
+			elementRef.manager.broacasts[name][i](r)
 		}
 	})
 	elementRef.ExecuteJS(
@@ -409,17 +476,17 @@ func (elementRef *ElementRef) Broadcast(name, eventName string) {
 	)
 }
 
-func (elementRef *ElementRef) RemoveListenersForEvent(event string) {
-	elementRef.ExecuteJS(fmt.Sprintf(`
-	const listeners = {this}.events && {this}.events[%s];
-
-	// Remove each click event listener
-	if (listeners && listeners.length > 0) {
-		for (const i = 0; i < listeners.length; i++) {
-			{this}.removeEventListener("%s", listeners[i]);
-		}
-	}`, event, event))
-}
+// func (elementRef *ElementRef) RemoveListenersForEvent(event string) {
+// 	elementRef.ExecuteJS(fmt.Sprintf(`
+// 	const listeners = {this}.events && {this}.events["%s"];
+// 	console.log({listeners})
+// 	// Remove each click event listener
+// 	if (listeners && listeners.length > 0) {
+// 		for (const i = 0; i < listeners.length; i++) {
+// 			{this}.removeEventListener("%s", listeners[i]);
+// 		}
+// 	}`, event, event))
+// }
 
 func (elementRef *ElementRef) OnWithParams(eventName string, f func(Record), params Record) {
 	eventId := generateUniqueName(eventName)
@@ -429,12 +496,12 @@ func (elementRef *ElementRef) OnWithParams(eventName string, f func(Record), par
 	value := ""
 	for key := range params {
 		value = strings.TrimSpace(params[key])
-		if tag == "" && strings.HasPrefix(value, "await"){
+		if tag == "" && strings.HasPrefix(value, "await") {
 			tag = "async "
 		}
 		paramsStr = fmt.Sprintf("%s\ndata['%s']=%s", paramsStr, key, value)
 	}
-	MANAGER.addEvent(eventId, f)
+	elementRef.manager.addEvent(eventId, f)
 	elementRef.ExecuteJS(
 		fmt.Sprintf(
 			`{this}.addEventListener('%s', %sfunction(event){
@@ -451,12 +518,11 @@ func (elementRef *ElementRef) BroadcastWithParams(name, eventName string, params
 	paramsStr := "const data = {dom: getAllDOMVariables()};"
 	for key := range params {
 		paramsStr = fmt.Sprintf("%s\ndata['%s']=%s", paramsStr, key, params[key])
-
 	}
-	MANAGER.addBroadcastIfNotExists(name)
-	MANAGER.addEvent(eventId, func(r Record) {
-		for i := range MANAGER.broacasts[name] {
-			MANAGER.broacasts[name][i](r)
+	elementRef.manager.addBroadcastIfNotExists(name)
+	elementRef.manager.addEvent(eventId, func(r Record) {
+		for i := range elementRef.manager.broacasts[name] {
+			elementRef.manager.broacasts[name][i](r)
 		}
 	})
 	elementRef.ExecuteJS(
@@ -469,12 +535,12 @@ func (elementRef *ElementRef) BroadcastWithParams(name, eventName string, params
 	)
 }
 
-func OnBroadcast(name string, f func()) {
-	MANAGER.addBroadcastListener(name, func(r Record) { f() })
+func (manager *PageContext) OnBroadcast(name string, f func()) {
+	manager.addBroadcastListener(name, func(r Record) { f() })
 }
 
-func OnBroadcastWithParams(name string, f EventHandler) {
-	MANAGER.addBroadcastListener(name, f)
+func (manager *PageContext) OnBroadcastWithParams(name string, f EventHandler) {
+	manager.addBroadcastListener(name, f)
 }
 
 func createParamRegex(paramName string) string {
@@ -488,7 +554,7 @@ func (elementRef *ElementRef) CreateQueryFromCommand(command string) string {
 }
 
 func (elementRef *ElementRef) ExecuteJS(command string) {
-	MANAGER.addCommand(jsCommand{
+	elementRef.manager.addCommand(jsCommand{
 		CommandType: "execute",
 		Command:     elementRef.CreateQueryFromCommand(command),
 	})
@@ -529,6 +595,10 @@ func (elementRef *ElementRef) SetValue(value string) {
 	elementRef.ExecuteJS(fmt.Sprintf("{this}.value=`%s`;", value))
 }
 
+func (elementRef *ElementRef) SetInnerHTML(value string) {
+	elementRef.ExecuteJS(fmt.Sprintf("{this}.innerHTML=`%s`;", value))
+}
+
 func (elementRef *ElementRef) RemoveAttribute(key string) {
 	elementRef.ExecuteJS(fmt.Sprintf("{this}.removeAttribute(`%s`);", key))
 }
@@ -545,96 +615,90 @@ func (elementRef *ElementRef) ToggleClass(class string) {
 	elementRef.ExecuteJS(fmt.Sprintf("{this}.classList.toggle(`%s`);", class))
 }
 
-func El(tag string) *ElementRef {
-
-	element := Element{
+func (manager *PageContext) El(tag string) *ElementRef {
+	if tag == "" {
+		tag = "div"
+	}
+    element := Element{
 		Tag:        tag,
 		attributes: A{},
 	}
 
 	element.GetId()
 
-	if MANAGER.firstElement == nil {
-		MANAGER.firstElement = &element
+	if manager.firstElement == nil {
+		manager.firstElement = &element
 	}
-	if MANAGER.setChild != nil {
-		MANAGER.setChild(&element)
+	if manager.setChild != nil {
+		manager.setChild(&element)
 	}
 
-	elementRef := ElementRef{element: &element, id: element.GetId()}
+	elementRef := &ElementRef{element: &element, id: element.GetId(), manager: manager}
+	element.ref = elementRef
 
-	return &elementRef
+	return elementRef
 }
 
-func LoadHTML(localPath string) {
+func (manager *PageContext) LoadHTML(localPath string) {
 	content, err := ReadFile(localPath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	El("*").Content(fmt.Sprintf("\n%s\n", content))
+	manager.El("*").Content(fmt.Sprintf("\n%s\n", content))
 }
 
 func isLocalPath(path string) bool {
 	return strings.HasPrefix(path, "./")
 }
 
-func LoadJS(path string) {
+func (manager *PageContext) LoadJS(path string) {
 
 	if !isLocalPath(path) {
-		El("script").Attr("src", path)
+		manager.El("script").Attr("src", path)
 	} else {
 		content, err := ReadFile(path)
 		if err != nil {
 			log.Fatal(err)
 		}
-		El("script").Content(fmt.Sprintf("\n%s\n", content))
+		manager.El("script").Content(fmt.Sprintf("\n%s\n", content))
 	}
 }
 
-func LoadCSS(path string) {
+func (manager *PageContext) LoadCSS(path string) {
 
 	if !strings.HasPrefix(path, "./") {
-		El("link").Attr("rel", "stylesheet").Attr("href", path)	
+		manager.El("link").Attr("rel", "stylesheet").Attr("href", path)
 	} else {
 		content, err := ReadFile(path)
 		if err != nil {
 			log.Fatal(err)
 		}
-		El("style").Content(fmt.Sprintf("\n%s\n", content))
+		manager.El("style").Content(fmt.Sprintf("\n%s\n", content))
 	}
-
-	// if !isLocalPath(path) {
-	// 	El("link").Attr("rel", "stylesheet").Attr("href", path)	
-	// } else {
-	// 	content, err := ReadFile(path)
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// 	El("style").Content(fmt.Sprintf("\n%s\n", content))
-	// }
 }
 
-func CreateHTML(title string, app func()) string {
+func createHTML(manager *PageContext, title string, app func(*PageContext)) string {
 
-	El("body").Inner(func() {
+	manager.El("body").Inner(func() {
 
-		El("script").Content(fmt.Sprintf("\n%s\n", jsCONTENT))
+		app(manager)
 
-		app()
+		if len(manager.commands) > 0 {
+			manager.El("script").Content(fmt.Sprintf("\n%s\n", jsCONTENT))
 
-		if len(MANAGER.commands) > 0 {
-			jsScript, err := json.Marshal(&MANAGER.commands)
+			jsScript, err := json.Marshal(manager.commands)
 			if err != nil {
 				log.Fatal(err)
 			}
-			El("script").Content(fmt.Sprintf(
+			manager.El("script").Content(fmt.Sprintf(
 				"document.addEventListener('DOMContentLoaded', async()=>{handleServerCommand(%s);} )", jsScript),
 			)
 		}
 
 	})
 
-	appHTML := MANAGER.firstElement.String()
+	appHTML := manager.firstElement.String()
+	manager.hasExcecuted = true
 
 	html := fmt.Sprintf(
 		`<!DOCTYPE html>
@@ -657,7 +721,7 @@ func CreateHTML(title string, app func()) string {
 		if err != nil {
 			log.Fatal("Error creating directory:", err)
 		}
-	} 
+	}
 
 	err := os.WriteFile("./output/index.html", []byte(html), 0644)
 	if err != nil {
@@ -666,12 +730,13 @@ func CreateHTML(title string, app func()) string {
 	return html
 }
 
-func CreateApp(title string, port uint, app func()) {
+func CreateApp(title string, port uint, app func(*PageContext)) {
 
-	MANAGER.reset()
+	manager := createManager()
+	manager.reset()
 
 	server := CreateServer()
-	html := CreateHTML(title, app)
+	html := createHTML(manager, title, app)
 
 	server.Expose("/static/", "./public")
 
@@ -679,26 +744,27 @@ func CreateApp(title string, port uint, app func()) {
 		fmt.Fprint(w, html)
 	})
 
-	server.Route("POST", "/api/v1/call", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
+	if len(manager.commands) > 0 {
+		server.Route("POST", "/api/v1/call", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
 
-		bytes, err := io.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, "Can't read Body", http.StatusBadRequest)
-			return
-		}
+			bytes, err := io.ReadAll(r.Body)
+			if err != nil {
+				http.Error(w, "Can't read Body", http.StatusBadRequest)
+				return
+			}
 
-		// fmt.Println(string(bytes[:]))
-		data := JSResponse{}
-		if err := json.Unmarshal(bytes, &data); err != nil {
-			http.Error(w, "Invalid json", http.StatusBadRequest)
-			return
-		}
+			data := jSResponse{}
+			if err := json.Unmarshal(bytes, &data); err != nil {
+				http.Error(w, "Invalid json", http.StatusBadRequest)
+				return
+			}
 
-		clientCommands := MANAGER.handle(&data)
+			clientCommands := manager.handle(&data)
 
-		json.NewEncoder(w).Encode(clientCommands)
-	})
+			json.NewEncoder(w).Encode(clientCommands)
+		})
+	}
 
 	server.Listen(port)
 }

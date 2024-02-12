@@ -2,12 +2,13 @@ package demo
 
 import (
 	"fmt"
+
 	"github.com/luowensheng/dream"
 )
 
-func Square(value string, onSquareClick func(dream.Record) string) {
+func Square(page *dream.PageContext, value string, onSquareClick func(dream.Record) string) {
 
-	buttonRef := dream.El("button").Class("square").Content(value)
+	buttonRef := page.El("button").Class("square").Content(value)
 	buttonRef.OnWithParams("click", func(r dream.Record) {
 		buttonRef.SetTextContent(onSquareClick(r))
 	}, dream.Record{"value": buttonRef.GetTextContent()},
@@ -16,10 +17,10 @@ func Square(value string, onSquareClick func(dream.Record) string) {
 
 // https://react.dev/learn/tutorial-tic-tac-toe
 
-func Board(xIsNext *dream.DOMVariable[bool], squares *dream.DOMVariable[[]string], onPlay func([]string)) {
+func Board(page *dream.PageContext, xIsNext *dream.DOMVariable[bool], squares *dream.DOMVariable[[]string], onPlay func([]string)) {
 
-	winner := dream.NewNamedDOMVariable("winner", "")
-	status := dream.NewNamedDOMVariable("status", "Next player: X")
+	winner := dream.NewNamedDOMVariable(page, "winner", "")
+	status := dream.NewNamedDOMVariable(page, "status", "Next player: X")
 
 	handleClick := func(i int, value string) {
 		// fmt.Println("i = ", i, "&&", "value = ", value, " -> xIsNext", xIsNext)
@@ -32,10 +33,10 @@ func Board(xIsNext *dream.DOMVariable[bool], squares *dream.DOMVariable[[]string
 		// fmt.Println("*******************************************", squaresValue, winner.Value(), "________")
 
 		if winner.Value() != "" {
-			return 
+			return
 		}
 		onPlay(squaresValue)
-		
+
 	}
 
 	winner.OnValueUpdated(func(newWinner string) {
@@ -49,18 +50,18 @@ func Board(xIsNext *dream.DOMVariable[bool], squares *dream.DOMVariable[[]string
 			}
 		}
 	})
-    
-	dream.El("div").Class("status").DOMContent(status)
+
+	page.El("div").Class("status").DOMContent(status)
 
 	for i := 0; i < 3; i++ {
-		dream.El("div").Class("board-row").Inner(func() {
+		page.El("div").Class("board-row").Inner(func() {
 
 			for j := 0; j < 3; j++ {
 				count := i*3 + j
-				Square(squares.Value()[j], func(params dream.Record) string { 
+				Square(page, squares.Value()[j], func(params dream.Record) string {
 					value := params["value"]
 					if value != "" {
-						return value 
+						return value
 					}
 					fmt.Println("_______________", value, "++++++++++++++++++++++++")
 					var newValue string
@@ -82,12 +83,12 @@ func Board(xIsNext *dream.DOMVariable[bool], squares *dream.DOMVariable[[]string
 	}
 }
 
-func Game() {
+func Game(page *dream.PageContext) {
 
 	// dream.LoadCSS("./assets/tictactoe.css")
 	// [][]*dream.DOMVariable[{[]string{}}]
-	history := dream.NewNamedDOMVariable("history", [][]string{{}})
-	
+	history := dream.NewNamedDOMVariable(page, "history", [][]string{{}})
+
 	history.UpdateValue(func(s [][]string) [][]string {
 		for i := 0; i < 9; i++ {
 			s[0] = append(s[0], "")
@@ -95,20 +96,20 @@ func Game() {
 		return s
 	})
 
-	currentMove := dream.NewNamedDOMVariable("currentMove", 0)
-	xIsNext := dream.NewNamedDOMVariable("xIsNext", currentMove.Value() %2 == 0)
+	currentMove := dream.NewNamedDOMVariable(page, "currentMove", 0)
+	xIsNext := dream.NewNamedDOMVariable(page, "xIsNext", currentMove.Value()%2 == 0)
 	currentMove.OnValueUpdated(func(i int) {
-		xIsNext.SetValue(i % 2 == 0)
+		xIsNext.SetValue(i%2 == 0)
 		fmt.Println("CURRENT MOVE UPDATED @@@@@@", i, xIsNext.Value(), ")))")
 	})
-	currentSquares := dream.NewNamedDOMVariable("currentSquares", history.Value()[currentMove.Value()])
+	currentSquares := dream.NewNamedDOMVariable(page, "currentSquares", history.Value()[currentMove.Value()])
 
 	handlePlay := func(nextSquares []string) {
 		history.UpdateValue(func(s [][]string) [][]string {
 			return append(s, nextSquares)
 		})
 		// currentMove.SetValue(len(history.Value()) - 1)
-		currentMove.UpdateValue(func(i int) int { return i+1})
+		currentMove.UpdateValue(func(i int) int { return i + 1 })
 		fmt.Println("HISTORY UPDATED @@@@@@", nextSquares, "**", currentMove)
 
 	}
@@ -129,18 +130,18 @@ func Game() {
 				description = "Go to game start"
 			}
 
-			dream.El("li").Attr("key", fmt.Sprintf("%d", move)).Inner(func() {
-				dream.El("button").Content(description).On("click", func() { jumpTo(move) })
+			page.El("li").Attr("key", fmt.Sprintf("%d", move)).Inner(func() {
+				page.El("button").Content(description).On("click", func() { jumpTo(move) })
 			})
 		}
 	}
 
-	dream.El("div").Class("game").Inner(func() {
-		dream.El("div").Class("game-board").Inner(func() {
-			Board(xIsNext, currentSquares, handlePlay)
+	page.El("div").Class("game").Inner(func() {
+		page.El("div").Class("game-board").Inner(func() {
+			Board(page, xIsNext, currentSquares, handlePlay)
 		})
-		dream.El("div").Class("game-info").Inner(func() {
-			dream.El("ol").Inner(moves)
+		page.El("div").Class("game-info").Inner(func() {
+			page.El("ol").Inner(moves)
 		})
 	})
 
@@ -164,7 +165,7 @@ func calculateWinner(squares []string) string {
 		a := line[0]
 		b := line[1]
 		c := line[2]
-        win := squares[a] != "" && squares[a] == squares[b] && squares[a] == squares[c] 
+		win := squares[a] != "" && squares[a] == squares[b] && squares[a] == squares[c]
 		fmt.Println(line, []string{squares[a], squares[b], squares[c]}, "=>>>>>", win)
 		if win {
 			return squares[a]
@@ -173,6 +174,8 @@ func calculateWinner(squares []string) string {
 	return ""
 }
 
-func TicTacToe() {
-	dream.CreateApp("TicTacToe", 9090, Game)
-}
+// func TicTacToe(page* dream.PageContext) {
+// 	dream.CreateApp("TicTacToe", 9090, func(pc *dream.PageContext) {
+// 		Game(page)
+// 	})
+// }

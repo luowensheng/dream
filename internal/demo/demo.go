@@ -16,27 +16,30 @@ var ALIEN_IMAGES = []string{
 
 var BroadcastButtonClicked = "BroadcastButtonClicked"
 
-func page() {
+
+
+
+func App(page *dream.PageContext) {
 
 	numberOfImages := len(ALIEN_IMAGES)
 	currentIndex := 0
-	dream.LoadCSS("./assets/style.css")
+	// page.LoadCSS("./assets/style.css")
 
-	dream.El("button").Content("Broadcast").Broadcast(BroadcastButtonClicked, "click")
+	page.El("button").Content("Broadcast").Broadcast(BroadcastButtonClicked, "click")
 
-	dream.OnBroadcast(BroadcastButtonClicked, func() {
+	page.OnBroadcast(BroadcastButtonClicked, func() {
 		fmt.Println("NEW BROADCAST!!!!!!!!!!!!!!!!")
 
 	})
 
-	dream.OnBroadcastWithParams(BroadcastButtonClicked, func(r dream.Record) {
+	page.OnBroadcastWithParams(BroadcastButtonClicked, func(r dream.Record) {
 
-		dream.ExecuteWithResponse("JSON.stringify(document.location)", func(output string) {
+		page.ExecuteWithResponse("JSON.stringify(document.location)", func(output string) {
 			fmt.Println("Current Document Location: ", output)
 		})
 	})
 
-	imgRef := dream.El("img").
+	imgRef := page.El("img").
 		Attr("class", "main-img").
 		Attr("src", "/static/img.png")
 
@@ -44,7 +47,7 @@ func page() {
 		imgRef.ToggleClass("invisible")
 	})
 
-	dream.El("input").InnerRef(func(input *dream.ElementRef) {
+	page.El("input").InnerRef(func(input *dream.ElementRef) {
 		input.OnWithParams("keydown", func(params dream.Record) {
 			// fmt.Println(params["key"])
 			input.SetValue("Hacked!!")
@@ -52,17 +55,17 @@ func page() {
 		}, dream.Record{"key": "event.key"})
 	})
 
-	dream.El("div").
+	page.El("div").
 		Attr("style", "display:flex; flex-direction:row; height: 100%").
 		Attr("class", "center").
 		InnerRef(func(div *dream.ElementRef) {
 
-			leftButtonRef := dream.El("button").Content("-").Attr("class", "click-button")
+			leftButtonRef := page.El("button").Content("-").Attr("class", "click-button")
 
-			h1Ref := dream.El("span").Content("0").Attr("class", "title")
+			h1Ref := page.El("span").Content("0").Attr("class", "title")
 			buttonClickedParams := dream.Record{"counter": h1Ref.GetTextContent()}
 
-			rightButtonRef := dream.El("button").Content("+").Attr("class", "click-button")
+			rightButtonRef := page.El("button").Content("+").Attr("class", "click-button")
 
 			leftButtonRef.OnWithParams("click", func(params dream.Record) {
 				counter, err := strconv.Atoi(params["counter"])
@@ -101,6 +104,6 @@ func page() {
 
 }
 
-func Demo() {
-	dream.CreateApp("Surla", 9090, page)
-}
+// func Demo() {
+// 	dream.CreateApp("Surla", 9090, page)
+// }
