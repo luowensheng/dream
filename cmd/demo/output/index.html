@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>t</title>
+</head>
+<body id="body-element-0">
+	<button id="button-element-1">Click</button>
+	<div id="div-element-2">
+	<div id="div-element-3">element-0</div>
+	<div id="div-element-4">element-1</div>
+	<div id="div-element-5">element-2</div>
+	<div id="div-element-6">element-3</div>
+	<div id="div-element-7">element-4</div>
+	<div id="div-element-8">element-5</div>
+	<div id="div-element-9">element-6</div>
+	<div id="div-element-10">element-7</div>
+	<div id="div-element-11">element-8</div>
+	<div id="div-element-12">element-9</div>
+</div>
+	<script id="script-element-14">
+
+
+// https://blog.risingstack.com/writing-a-javascript-framework-sandboxed-code-evaluation/. Eval alternatives
+const DOM_VARIBLES = new Map()
+
+function setDOMVariable(name, value) {
+    DOM_VARIBLES.set(name, value)
+}
+
+function getDOMVariable(name) {
+    return DOM_VARIBLES.get(name) || null
+}
+
+function getAllDOMVariables() {
+    return JSON.stringify([...DOM_VARIBLES.keys()].map(k => {
+        return {name:k, value: JSON.stringify(DOM_VARIBLES.get(k)) }
+    }))
+}
+
+
+function showVariables() {
+    console.log(JSON.parse(getAllDOMVariables()))
+}
+async function callBackend(funcName, params, event) {
+    const response = await fetch("/api/v1/call", {
+        method: "POST",
+        body: JSON.stringify({"call": funcName, "params": params || {}})
+    });
+    const data = await response.json();
+
+    if (data.success){
+        handleServerCommand(data.commands, event)
+    } else {
+        console.error(data.message)
+    }
+}
+
+function handleServerCommand(commands, event){
+    if (!commands){
+        return;
+    }
+    console.log({commands})
+    let onComplete = [];
+
+    for (let command of commands ){
+        let key = command.type;
+        console.log({command})
+        try {
+            switch (key) {
+                case "execute":
+                    let result = eval(command.command);
+                    console.log({result});
+                    break;
+                case "execute-after":
+                    console.log({after: command.command});
+                    onComplete.push(()=>eval(command.command));
+                    break;
+                case "html":
+                    resetHTML(command.command);
+                    break;                          
+                default:
+                    console.error({key, command: command.command})
+                    break;
+            } 
+        } catch (error) {
+            console.error({error})
+            console.log({command})
+            callBackend('error', {error: error.toString(), command})
+        }
+
+    }
+
+    for (const f of onComplete) {
+        f()
+    }
+}
+
+
+</script>
+	<script id="script-element-15">document.addEventListener('DOMContentLoaded', async()=>{handleServerCommand([{"type":"execute","command":"document.getElementById(`button-element-1`).addEventListener(`click`, function(event){callBackend(`click_13`, {}, event);})"}]);} )</script>
+</body>
+		
